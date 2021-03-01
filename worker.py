@@ -2,7 +2,7 @@ import random
 
 self_esteem_coefficients = {
     "normal": 1,
-    "imposter": 0.7
+    "imposter": 0.9
 }
 
 class Worker():

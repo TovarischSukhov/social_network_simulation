@@ -101,20 +101,23 @@ class World():
         self.mean_wage_history.append(sum(wages)/float(len(wages)))
     
 if __name__ == "__main__":
-    test_network = World()
+    test_network = World(beta=0.8, N_workers=21, N_companies=7)
     print(test_network)
-    print(test_network.social_network.edges)
-    print(test_network.social_network.nodes)
-    print(test_network.social_network.nodes[1]['worker'].type)
+    # print(test_network.social_network.edges)
+    # print(test_network.social_network.nodes)
+    # print(test_network.social_network.nodes[1]['worker'].type)
 
-    test_network.first_stage()
-    print()
+    for stage_num in range(10):
+        print(f'starting stage {stage_num}')
+        test_network.first_stage()
 
-    test_network.second_stage()
-    test_network.third_stage()
-    test_network.new_cycle()
+        test_network.second_stage()
+        test_network.third_stage()
+        test_network.new_cycle()
 
-    print(test_network)
+        print(test_network)
+
+    print('#'*30)
 
     print(test_network.mean_wage_history)
     for node in test_network.social_network.nodes:
