@@ -82,6 +82,7 @@ class World():
         for node in list(self.social_network.nodes):
             self.social_network.nodes[node]['worker'].stage_choose_employer() 
 
+
     def new_cycle(self):
         '''
         This method 
@@ -99,24 +100,27 @@ class World():
             self.social_network.nodes[node]['worker'].new_cycle()
         
         self.mean_wage_history.append(sum(wages)/float(len(wages)))
+
+    def run_iteration(self, silent=True):
+        self.first_stage()
+
+        self.second_stage()
+        self.third_stage()
+        self.new_cycle()
+
+        if not silent:
+            print(self)
+
+        return self.get_mean_wage()
     
 if __name__ == "__main__":
     test_network = World(beta=0.8, N_workers=21, N_companies=7)
     print(test_network)
-    # print(test_network.social_network.edges)
-    # print(test_network.social_network.nodes)
-    # print(test_network.social_network.nodes[1]['worker'].type)
 
     for stage_num in range(10):
         print(f'starting stage {stage_num}')
-        test_network.first_stage()
-
-        test_network.second_stage()
-        test_network.third_stage()
-        test_network.new_cycle()
-
-        print(test_network)
-
+        test_network.run_iteration()
+    
     print('#'*30)
 
     print(test_network.mean_wage_history)
