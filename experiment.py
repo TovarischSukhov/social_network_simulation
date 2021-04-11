@@ -42,8 +42,7 @@ decimal_range_hundreds = lambda s, f, step: [x/100 for x in range(int(s*100), in
 
 
 if __name__ == '__main__':
-    print(decimal_range_hundreds(0.5, 1., 0.05))
-    exp = Experiment(decimal_range_hundreds(0.5, 1., 0.05), decimal_range_hundreds(0.5, 1., 0.05))
+    exp = Experiment(decimal_range_hundreds(0.8, 0.9, 0.05), decimal_range_hundreds(0.8, 0.9, 0.05))
     exp.run()
 
     for r in exp.results:

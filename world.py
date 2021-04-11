@@ -1,4 +1,5 @@
 import random
+import math
 
 import networkx as nx
 
@@ -32,11 +33,17 @@ class World():
         #creating Empoyers
         self.employers = []
         for i in range(N_companies):
-            self.employers.append(Employer(i))
+            self.employers.append(Employer(i, N=1))
 
         #creating workers
-        for i in range(N_workers):
-            self.social_network.add_nodes_from([(i, {'worker': self._init_worker()})])
+        n_low = math.ceil(self.N_workers * (1-self.beta))
+        n_norm = math.floor(self.N_workers * self.beta)
+
+        low = [(i, {'worker': self._init_worker(tpe='imposter')}) for i in range(n_low)]
+        norm = [(n_low + i, {'worker': self._init_worker(tpe='normal')}) for i in range(n_norm)]
+
+        self.social_network.add_nodes_from(low)
+        self.social_network.add_nodes_from(norm)
         
         #creating connections between them, for now - fixed and getting as a param when init
         all_workers = list(range(self.N_workers))
@@ -47,11 +54,20 @@ class World():
             self.social_network.add_edges_from([ (i, c) for c in connections ])
         
 
-    def _init_worker(self):
-        tpe = 'normal'
-        if random.random() > self.beta:
-            tpe = 'imposter'
+    def _init_worker(self, tpe):
         return Worker(utype=tpe, current_wage=100)
+
+
+    def _all_workers_employed(self):
+        print([not self.social_network.nodes[w]['worker'].is_employed for w in self.social_network.nodes])
+        return all(
+                [self.social_network.nodes[w]['worker'].is_employed for w in self.social_network.nodes]
+                )
+
+    def get_filtered_network(self, filter):
+        #TODO
+        raise NotImplementedError
+
 
     def __repr__(self):
 
@@ -80,7 +96,19 @@ class World():
 
     def third_stage(self):
         for node in list(self.social_network.nodes):
-            self.social_network.nodes[node]['worker'].stage_choose_employer() 
+            self.social_network.nodes[node]['worker'].stage_choose_employer()
+            # if  node > 10:
+            #     exit(0)
+
+    def can_finish_cycle(self):
+        if self._all_workers_employed():
+            print('here')
+            return True
+        for emp in self.employers:
+            if emp.get_open_vacancies():
+                return False
+                
+        return True
 
 
     def new_cycle(self):
@@ -104,8 +132,10 @@ class World():
     def run_iteration(self, silent=True):
         self.first_stage()
 
-        self.second_stage()
-        self.third_stage()
+        while not self.can_finish_cycle():
+            self.second_stage()
+            self.third_stage()
+
         self.new_cycle()
 
         if not silent:
@@ -114,10 +144,12 @@ class World():
         return self.get_mean_wage()
     
 if __name__ == "__main__":
-    test_network = World(beta=0.8, N_workers=21, N_companies=7)
+    test_network = World(alpha=0.99, beta=0.99, N_workers=5, N_companies=3)
     print(test_network)
 
-    for stage_num in range(10):
+    print(test_network.social_network.nodes())
+
+    for stage_num in range(2):
         print(f'starting stage {stage_num}')
         test_network.run_iteration()
     
