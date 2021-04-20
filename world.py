@@ -33,7 +33,7 @@ class World():
         #creating Empoyers
         self.employers = []
         for i in range(N_companies):
-            self.employers.append(Employer(i, N=1))
+            self.employers.append(Employer(i, N=5) )
 
         #creating workers
         n_low = math.ceil(self.N_workers * (1-self.beta))
@@ -144,7 +144,7 @@ class World():
         return self.get_mean_wage()
     
 if __name__ == "__main__":
-    test_network = World(alpha=0.99, beta=0.99, N_workers=5, N_companies=3)
+    test_network = World(alpha=0.99, beta=0.99, N_workers=30, N_companies=3)
     print(test_network)
 
     print(test_network.social_network.nodes())

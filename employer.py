@@ -50,8 +50,8 @@ class Employer():
 
 
     def choose_workers(self, network):
-        print('cndds',self.vacancies)
-        for vac in self.vacancies:
+        print('cndds',self.get_open_vacancies())
+        for vac in self.get_open_vacancies():
             worker = min(vac.candidates)
             self.make_offer(worker, case='first_time', vacancy=vac, salary=worker.give_employer_wage())
     
