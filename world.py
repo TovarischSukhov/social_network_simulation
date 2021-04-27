@@ -17,6 +17,8 @@ Probability of giving information {}
 Number of "friends" per worker {}
 """
 
+EMPLOYER_NEEDS = { 'junior': 5, 'middle': 3, 'senior': 1 }
+
 
 class World():
     
@@ -55,7 +57,7 @@ class World():
         
 
     def _init_worker(self, tpe):
-        return Worker(utype=tpe, current_wage=100)
+        return Worker(utype=tpe, current_wage=100, qualification='junior')
 
 
     def _all_workers_employed(self):

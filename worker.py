@@ -1,25 +1,33 @@
 import random
 
-self_esteem_coefficients = {
-    "normal": 1,
-    "imposter": 0.9
+# qualification levels should be in accending order
+QUALIFICATIONS = ['practice', 'junior', 'middle', 'senior']
+
+SELFESTEEM_QUALIFICATION_MOVE = {
+    'normal': 0,
+    'imposter': -1 # imposter thinks that he is one qalification lever lower than it is in reality
 }
 
 class Worker():
-    def __init__(self, current_wage, utype="normal", tell_wage=1, _id=None):
+    def __init__(self, current_wage, qualification, utype="normal", tell_wage=1, _id=None):
         self.id = _id or random.randint(0, 10000)
 
-        # возможео имеет смысл зп отличать зп когда работает или когда просто хочет
+        # TODO возможео имеет смысл зп отличать зп когда работает или когда просто хочет
         self.current_wage = current_wage
         self.type = utype
         self.tell_wage_coeff = tell_wage
-        try:
-            self.self_esteem_coefficient = self_esteem_coefficients[utype]
-        except KeyError:
-            raise "No such self esteem type"
 
-        # also here would be great to have all friends
-        self.others_wage = []
+        # check if qualification was initialised correctly
+        if qualification not in QUALIFICATIONS:
+            raise KeyError('Unknown qualification level')
+        self.real_qualification = qualification
+
+        # count how person estimates his qualification
+        new_qualification_index = QUALIFICATIONS.index(qualification) + SELFESTEEM_QUALIFICATION_MOVE[utype]
+        self.self_esteemed_qualification = QUALIFICATIONS[new_index]
+
+        # TODO also here would be great to have all friends ?
+        self.others_qualifications_wages = [] # [(qual: str, wage: int), (...)]
         self.offers = []
 
         self.is_employed = False
@@ -42,14 +50,24 @@ class Worker():
             self.current_wage = sum(self.others_wage)/len(self.others_wage)
 
     def give_employer_wage(self):
-        return self.current_wage * self.self_esteem_coefficient 
+        '''
+        Method used by Employer to find out current wages level
+        returns: qualification_level, wage
+        '''
+        return self.self_esteemed_qualification, self.current_wage
 
     def give_wage(self):
+        '''
+        Method used by Worker to find out current wages level
+        returns: qualification_level, wage or None
+        '''
         if random.random() <= self.tell_wage_coeff:
-            return self.current_wage * self.self_esteem_coefficient
+            return self.self_esteemed_qualification, self.current_wage 
     
-    def stage_wage_recearch(self, wages: list=[]):
-        self.others_wage = wages
+    def stage_wage_recearch(self, qualifications_wages: list=[]):
+        ''' Mehtod used by World to give Worker wages of surrounding Workers
+        '''
+        self.others_qualifications_wages = qualifications_wages
         self._count_new_wage()
 
     def recieve_offer(self, employer, vacancy, salary):
@@ -58,7 +76,11 @@ class Worker():
         self.offers.append(offer)
 
     def stage_choose_employer(self):
-        '''Method used by World to cover stage 3 of simulation'''
+        '''
+        Method used by World to cover stage 3 of simulation
+        Worker already have all the offers and need to choose the employer
+        if there are several employers that offers the same amoutn of money, worker choose randomly
+        '''
         mx_offers = []
         mx_sal = 0
         for of in self.offers:
@@ -68,31 +90,23 @@ class Worker():
             if of.salary == mx_sal:
                 mx_offers.append(of)
         
-        if len(mx_offers) > 1:
+        if len(mx_offers) > 0:
             self.offers = []
-            for of in mx_offers:
-                of.employer.get_answer_from_worker(self, 'multiple_equal_offers', of.vacancy, of.salary)
-                print('go for raise')
-        elif len(mx_offers) == 1:
-            chosen = mx_offers[0].employer
-            print(f'arreeng for work with status {self.is_employed}, worker no {self.id}')
-            self.is_employed = True
-            chosen.get_answer_from_worker(self, 'agree', of.vacancy)
-            print('agreed')
-            self.current_wage = mx_offers[0].salary
-            self.offers = []
-        self.offers = []
+            random.choice(mx_offers).employer.get_answer_from_worker(self, 'agree', of.vacancy)
+            print('agreed random')
         print(len(self.offers),'offers on the way out')
         if not self.is_employed and self.offers:
             self.stage_choose_employer()
 
     
     def __lt__(self, worker_2):
+        '''comparing two workers by <> signes, commaring by their current wages'''
         if self.current_wage < worker_2.current_wage:
             return True
         return False
 
     def __gt__(self, worker_2):
+        '''comparing two workers by <> signes, commaring by their current wages'''
         if self.current_wage > worker_2.current_wage:
             return True
         return False
