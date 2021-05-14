@@ -40,17 +40,17 @@ class Employer():
     def create_candidates_list(self, network):
         for vac in self.get_open_vacancies():
             vac.candidates = [] # избавляемся от старых кандидатов, чтобы не смешивались с новыми предлжениями
-            workers = list(network.nodes()).copy()
+            workers = [w for w in network.nodes if not network.nodes[w]['worker'].is_employed]
             random.shuffle(workers)
+            # print('no potential workers ', len(workers))
             while vac.candidates_needed() and len(workers) > 0:
                 candidate = random.choice(workers)
-                if not network.nodes[candidate]['worker'].is_employed:
-                    vac.add_candidate(network.nodes[candidate]['worker'])
+                vac.add_candidate(network.nodes[candidate]['worker'])
                 workers.remove(candidate)
 
 
     def choose_workers(self, network):
-        print('cndds',self.get_open_vacancies())
+        # print('cndds',self.get_open_vacancies())
         for vac in self.get_open_vacancies():
             worker = min(vac.candidates)
             self.make_offer(worker, case='first_time', vacancy=vac, salary=worker.give_employer_wage())
@@ -60,18 +60,15 @@ class Employer():
         if case == 'first_time':
             worker.recieve_offer(self, vacancy, salary)
         elif case == 'upsale':
-            print('upsale', worker, 'upsalig from', salary)
+            # print('upsale', worker, 'upsalig from', salary)
             # TODO temrary thing, here will be utility function for employer
-            salary += salary*0.1
-            if random.random() > 0.5:
-                print('2nd upsale')
-                salary += salary*0.1
+            salary += salary*(random.randint(0, 20)/100)
             if salary > 2*worker.give_employer_wage():
-                print('break')
+                # print('break')
                 return
             worker.recieve_offer(self, vacancy, salary)
 
-            print(worker, len(worker.offers))
+            # print(worker, len(worker.offers))
 
 
     def offer_candidates(self, network):
@@ -103,8 +100,8 @@ class Vacancy():
         self.candidates.append(candidate)
     
     def close(self):
-        if not self.is_open:
-            print('answer for closed vac')
+        # if not self.is_open:
+            # print('answer for closed vac')
         self.is_open = False
 
     def new_cycle(self):

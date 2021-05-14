@@ -1,12 +1,15 @@
 import random
 
-self_esteem_coefficients = {
-    "normal": 1,
-    "imposter": 0.9
-}
 
 class Worker():
-    def __init__(self, current_wage, utype="normal", tell_wage=1, _id=None):
+    def __init__(
+            self, 
+            current_wage: int, 
+            utype:str = "normal", 
+            tell_wage: float = 1, 
+            _id: int = None, 
+            self_esteem_coefficients: dict = {}
+        ):
         self.id = _id or random.randint(0, 10000)
 
         # возможео имеет смысл зп отличать зп когда работает или когда просто хочет
@@ -16,7 +19,7 @@ class Worker():
         try:
             self.self_esteem_coefficient = self_esteem_coefficients[utype]
         except KeyError:
-            raise "No such self esteem type"
+            raise "No such self esteem type or no coefficients given"
 
         # also here would be great to have all friends
         self.others_wage = []
@@ -59,6 +62,7 @@ class Worker():
 
     def stage_choose_employer(self):
         '''Method used by World to cover stage 3 of simulation'''
+        # print(self, 'choosing job, got offres', self.offers)
         mx_offers = []
         mx_sal = 0
         for of in self.offers:
@@ -72,17 +76,17 @@ class Worker():
             self.offers = []
             for of in mx_offers:
                 of.employer.get_answer_from_worker(self, 'multiple_equal_offers', of.vacancy, of.salary)
-                print('go for raise')
+                # print('go for raise')
         elif len(mx_offers) == 1:
             chosen = mx_offers[0].employer
-            print(f'arreeng for work with status {self.is_employed}, worker no {self.id}')
+            # print(f'arreeng for work with status {self.is_employed}, worker no {self.id}')
             self.is_employed = True
             chosen.get_answer_from_worker(self, 'agree', of.vacancy)
-            print('agreed')
+            # print('agreed')
             self.current_wage = mx_offers[0].salary
             self.offers = []
-        self.offers = []
-        print(len(self.offers),'offers on the way out')
+        # self.offers = []
+        # print(len(self.offers),'offers on the way out')
         if not self.is_employed and self.offers:
             self.stage_choose_employer()
 
@@ -121,8 +125,11 @@ class Offer:
         return f'Offer for {self.salary} from employer {self.employer.uid}'
 
 if __name__=='__main__':
-    w1 = Worker(100)
-    w2 = Worker(200)
-    print(max([w1, w2]))
-    print(w1 > w2)
-    print(w1 < w2)
+    self_esteem_coefficients = {
+            "normal":  1,
+            "imposter": 0.9
+        }
+    w_imposter = Worker(current_wage=100, utype="imposter", 
+        tell_wage=1, _id='test_1', self_esteem_coefficients=self_esteem_coefficients
+        )
+
