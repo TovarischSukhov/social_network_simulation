@@ -3,8 +3,10 @@ import math
 
 import networkx as nx
 
+from settings import EMPLOYER_NEEDS, INITIAL_WAGE
 from employer import Employer
 from worker import Worker
+from utils import make_qualifications_dict_from_market
 
 
 NETWORK_REPRESENATION_TEMPLATE = """Social Network simulation
@@ -17,35 +19,46 @@ Probability of giving information {}
 Number of "friends" per worker {}
 """
 
-EMPLOYER_NEEDS = { 'junior': 5, 'middle': 3, 'senior': 1 }
-
 
 class World():
     
-    def __init__(self, beta=1, alpha=1, N_workers=10, N_companies=3, n_conn=2):
+    def __init__(
+                self,
+                qualification_ratio, 
+                beta=1, 
+                alpha=1, 
+                N_workers=10, 
+                N_companies=3, 
+                n_conn=2,
+            ):
         self.beta = beta
         self.alpha = alpha
-        self.N_workers = N_workers
+        self.N_workers = 0
         self.iteration = 0
-        self.mean_wage_history = [0]
+        self.mean_wage_history = {}
         self.n_connections_per_worker = n_conn
 
         self.social_network = nx.Graph()
 
-        #creating Empoyers
+        #creating Employers
         self.employers = []
         for i in range(N_companies):
-            self.employers.append(Employer(i, N=5) )
+            self.employers.append(Employer(i, requirements=EMPLOYER_NEEDS, market_size_per_vacancy=3) )
 
         #creating workers
-        n_low = math.ceil(self.N_workers * (1-self.beta))
-        n_norm = math.floor(self.N_workers * self.beta)
+        for qual, ratio in qualification_ratio.items():
+            n_qual_workers = round(N_workers*ratio)
 
-        low = [(i, {'worker': self._init_worker(tpe='imposter')}) for i in range(n_low)]
-        norm = [(n_low + i, {'worker': self._init_worker(tpe='normal')}) for i in range(n_norm)]
+            n_low = math.ceil(n_qual_workers * (1-self.beta))
+            n_norm = math.floor(n_qual_workers * self.beta)
 
-        self.social_network.add_nodes_from(low)
-        self.social_network.add_nodes_from(norm)
+            low = [(self.N_workers + i, {'worker': self._init_worker('imposter', qual)}) for i in range(n_low)]
+            norm = [(self.N_workers + n_low + i, {'worker': self._init_worker('normal', qual)}) for i in range(n_norm)]
+
+            self.N_workers += n_qual_workers
+
+            self.social_network.add_nodes_from(low)
+            self.social_network.add_nodes_from(norm)
         
         #creating connections between them, for now - fixed and getting as a param when init
         all_workers = list(range(self.N_workers))
@@ -55,9 +68,16 @@ class World():
                 connections.remove(i)
             self.social_network.add_edges_from([ (i, c) for c in connections ])
         
+        self.market_data = INITIAL_WAGE # here we will store the data abot mean wages for previous iteration
+        
 
-    def _init_worker(self, tpe):
-        return Worker(utype=tpe, current_wage=100, qualification='junior')
+    def _init_worker(self, tpe, qual):
+        return Worker(
+                utype=tpe, 
+                current_wage=INITIAL_WAGE[qual], 
+                qualification=qual, 
+                employer_requrnments=EMPLOYER_NEEDS,
+            )
 
 
     def _all_workers_employed(self):
@@ -82,14 +102,20 @@ class World():
             )
 
     def get_mean_wage(self):
-        return self.mean_wage_history[-1]
+        if self.mean_wage_history:
+            lasts = {q: self.mean_wage_history[q][-1] for q in self.mean_wage_history}
+            return lasts
+        return None
 
     def first_stage(self):
+        for emp in self.employers:
+            emp.set_budget(self.market_data) 
+
         for node in self.social_network.nodes:
             wages = []
             for neighbor in self.social_network.neighbors(node):
-                wages.append(self.social_network.nodes[neighbor]['worker'].give_wage())
-            self.social_network.nodes[node]['worker'].stage_wage_recearch(wages)
+                wages.append(self.social_network.nodes[neighbor]['worker'].give_qualification_wage())
+            self.social_network.nodes[node]['worker'].stage_wage_recearch(wages, self.market_data)
 
 
     def second_stage(self):
@@ -99,15 +125,13 @@ class World():
     def third_stage(self):
         for node in list(self.social_network.nodes):
             self.social_network.nodes[node]['worker'].stage_choose_employer()
-            # if  node > 10:
-            #     exit(0)
 
     def can_finish_cycle(self):
         if self._all_workers_employed():
             print('here')
             return True
         for emp in self.employers:
-            if emp.get_open_vacancies():
+            if emp.employees_needed():
                 return False
                 
         return True
@@ -122,14 +146,21 @@ class World():
         self.iteration += 1
 
         for emp in self.employers:
-            emp.new_cycle()
+            emp.new_cycle(self.social_network)
 
         wages = []
         for node in self.social_network.nodes:
-            wages.append(self.social_network.nodes[node]['worker'].give_employer_wage())
+            wages.append(self.social_network.nodes[node]['worker'].give_employer_qualification_wage())
             self.social_network.nodes[node]['worker'].new_cycle()
         
-        self.mean_wage_history.append(sum(wages)/float(len(wages)))
+        wages = make_qualifications_dict_from_market(wages)
+        
+        self.market_data = {q: sum(wages[q])/len(wages[q]) for q in wages if wages[q]}
+        
+        for q in self.market_data:
+            if q not in self.mean_wage_history:
+                self.mean_wage_history[q] = []
+            self.mean_wage_history[q].append(self.market_data[q])
 
     def run_iteration(self, silent=True):
         self.first_stage()
@@ -146,7 +177,7 @@ class World():
         return self.get_mean_wage()
     
 if __name__ == "__main__":
-    test_network = World(alpha=0.99, beta=0.99, N_workers=30, N_companies=3)
+    test_network = World(alpha=0.5, beta=0.5,n_conn=2, N_workers=10, N_companies=3, qualification_ratio={'junior': 0.5, 'middle': .3, 'senior': 0.2})
     print(test_network)
 
     print(test_network.social_network.nodes())
@@ -159,8 +190,9 @@ if __name__ == "__main__":
 
     print(test_network.mean_wage_history)
     for node in test_network.social_network.nodes:
-        print(f'worker {node}')        
+              
         w =  test_network.social_network.nodes[node]['worker']
+        print(w)  
         print(w.wage_history)
         print(w.employnment_history)
         print()
@@ -169,6 +201,8 @@ if __name__ == "__main__":
     print('__'*30)
     for emp in test_network.employers:
         print(f'employer {emp.uid}')
+        print(emp.qulification_level_history)
+        print(emp.worker_qulification_history)
         print(emp.n_working_history)
     
         print()

@@ -1,118 +1,108 @@
 import random
 
+from scipy.optimize import minimize
+
+from settings import QUALIFICATIONS
+from utils import employer_challenge, make_qualifications_dict_from_market
+
 class Employer():
-    def __init__(self, uid, N: int=3):
+    def __init__(self, uid, requirements: dict = {}, market_size: int = None, market_size_per_vacancy: int = 2):
+        '''
+
+        imputs:
+         - uid
+         - requirements: dict, {'qualifiation': number_workers ...}
+        '''
 
         # metadata
         self.uid  = uid
-        self.n_vacances = N
-        self.n_offers_per_vacancy = 3
+        self.requirements = requirements
+        # amount of workers employer sees on market on each iteration
+        self.market_size = market_size or sum([requirements[q] for q in requirements])
+        self.current_market_size = self.market_size
+        self.market_size_per_vacancy = market_size_per_vacancy
 
-        self.vacancies = []
-        for i in range(self.n_vacances):
-            self.vacancies.append(Vacancy(i, self))
+        # self.vacancies = []
+        # for i in range(self.n_vacances):
+        #     self.vacancies.append(Vacancy(i, self))
 
         # in-cycle data
-        self.n_currently_working = 0
-        self.candidates = []
+        self.workers = []
+        self.budget = 0
 
         # historical data
+        self.qulification_level_history = []
         self.n_working_history = []
+        self.worker_qulification_history = []
+        
+        # calculate current required qualification level
+        self.total_qualifiation_needed = sum([ requirements[q] * QUALIFICATIONS[q] for q in requirements])
         
 
-    def new_cycle(self):
+    def new_cycle(self, network):
         '''Method used by World to drop state between iterations'''
-        self.n_working_history.append(self.n_currently_working)
-        self.n_currently_working = 0
-        
-        for vac in self.vacancies:
-            vac.new_cycle()
+        self.budget = 0
+        self.current_market_size = self.market_size
+
+        q = self.total_qualifiation_needed
+        self.total_qualifiation_needed = sum([ self.requirements[q] * QUALIFICATIONS[q] for q in self.requirements])
+        self.qulification_level_history.append(self.total_qualifiation_needed - q)
+
+        self.n_working_history.append(len(self.workers))
+        w = [w.give_employer_qualification_wage() for w in self.workers ]
+        self.worker_qulification_history.append(make_qualifications_dict_from_market(w))
+        self.workers = []
 
 
-    def get_open_vacancies(self):
-        opn = []
-        for vac in self.vacancies:
-            if vac.is_open:
-                opn.append(vac)
-        return opn
+    def _enreach_market_info(self, market, network):
+        '''
+        add info on qualification, worker and salary
+        '''
+        # print(network[market[0]])
+        return [network.nodes[w]['worker'].give_employer_qualification_wage() for w in market ]
 
-
-    def create_candidates_list(self, network):
-        for vac in self.get_open_vacancies():
-            vac.candidates = [] # избавляемся от старых кандидатов, чтобы не смешивались с новыми предлжениями
-            workers = list(network.nodes()).copy()
-            random.shuffle(workers)
-            while vac.candidates_needed() and len(workers) > 0:
-                candidate = random.choice(workers)
-                if not network.nodes[candidate]['worker'].is_employed:
-                    vac.add_candidate(network.nodes[candidate]['worker'])
-                workers.remove(candidate)
-
-
-    def choose_workers(self, network):
-        print('cndds',self.get_open_vacancies())
-        for vac in self.get_open_vacancies():
-            worker = min(vac.candidates)
-            self.make_offer(worker, case='first_time', vacancy=vac, salary=worker.give_employer_wage())
     
-
-    def make_offer(self, worker, case, salary, vacancy):
-        if case == 'first_time':
-            worker.recieve_offer(self, vacancy, salary)
-        elif case == 'upsale':
-            print('upsale', worker, 'upsalig from', salary)
-            # TODO temrary thing, here will be utility function for employer
-            salary += salary*0.1
-            if random.random() > 0.5:
-                print('2nd upsale')
-                salary += salary*0.1
-            if salary > 2*worker.give_employer_wage():
-                print('break')
-                return
-            worker.recieve_offer(self, vacancy, salary)
-
-            print(worker, len(worker.offers))
-
-
     def offer_candidates(self, network):
         '''Method used by World to cover stage 2'''
-        self.create_candidates_list(network)
-        self.choose_workers(network)
+        workers = [i for i in network.nodes() if not network.nodes[i]['worker'].is_employed]
+        # workers = list(network.nodes()).copy()
+        random.shuffle(workers)
+        print(workers, self.market_size, self.employees_needed())
+        samplesize = min(self.market_size, len(workers))
+        market = random.sample(workers, k=samplesize)
+        # print(' mmark', market)
+        market = self._enreach_market_info(market, network)
+        # print('m1', market)
+        market, workers = make_qualifications_dict_from_market(market, return_workers=True)
+        # print('m2', market)
+
+        prc, jun, mid, sen = employer_challenge(
+            self.total_qualifiation_needed, self.budget, market, return_salaries=True,
+            )
+        mask = list(prc) + list(jun) + list(mid) + list(sen)
+        for i in range(len(mask)):
+            if mask[i] > 0:
+                workers[i].recieve_offer(self, mask[i])
+                print('w', workers[i])
+                # print('wo', workers[i].offrs)
+        print(self.uid, 'done offering')
 
 
-    def get_answer_from_worker(self, worker, answer, vacancy, salary=None):
+    def employees_needed(self):
+        '''Method used by World to determine if more workers needed'''
+        return self.total_qualifiation_needed > 0
+
+
+    def get_answer_from_worker(self, worker):
         '''Method used by Worker to agree for job'''
-        if answer == 'agree':
-            self.n_currently_working += 1
-            vacancy.close()      
-        elif answer == 'multiple_equal_offers':
-            self.make_offer(worker, case='upsale', salary=salary, vacancy=vacancy)
-        else:
-            raise KeyError('unknown answer')
+        self.workers.append(worker)
+        self.total_qualifiation_needed -=  QUALIFICATIONS[worker.real_qualification]
+        self.current_market_size -= self.market_size_per_vacancy
+        self.budget -= worker.give_employer_qualification_wage()[2]
+        print(self.uid,'got answer from ', worker)
 
-
-
-class Vacancy():
-    def __init__(self, _id, employer):
-        self.employer = employer
-        self._id = _id
-        self.is_open = True
-        self.candidates = []
-
-    def add_candidate(self, candidate):
-        self.candidates.append(candidate)
-    
-    def close(self):
-        if not self.is_open:
-            print('answer for closed vac')
-        self.is_open = False
-
-    def new_cycle(self):
-        self.is_open = True
-        self.candidates = []
-    
-    def candidates_needed(self):
-        return len(self.candidates) < 3
-
-    def __repr__(self):
-        return f'Vacancy, is open - {self.is_open}, {len(self.candidates)} candidates'
+    def set_budget(self, market_data):
+        '''Method used by World to give new wages stats in the beginning of each round'''
+        for q in self.requirements:
+            self.budget += self.requirements[q] * market_data[q]
+        
