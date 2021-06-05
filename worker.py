@@ -7,7 +7,7 @@ self_esteem_coefficients = {
 
 class Worker():
     def __init__(self, current_wage, utype="normal", tell_wage=1):
-        # возможео имеет смысл зп отличать зп когда работает или когда просто хочет
+        self.last_wage = current_wage
         self.current_wage = current_wage
         self.type = utype
         self.tell_wage_coeff = tell_wage
@@ -32,18 +32,21 @@ class Worker():
         self.wage_history.append(self.current_wage)
         self.employnment_history.append(self.is_employed)
         self.is_employed = False
+        self.last_wage = self.current_wage
+        self.offers = []
 
     
     def _count_new_wage(self):
+        self.others_wage = [w for w in self.others_wage if w]
         if self.others_wage:
             self.current_wage = sum(self.others_wage)/len(self.others_wage)
 
     def give_employer_wage(self):
-        return self.current_wage * self.self_esteem_coefficient 
+        return self.current_wage 
 
     def give_wage(self):
         if random.random() <= self.tell_wage_coeff:
-            return self.current_wage * self.self_esteem_coefficient
+            return self.last_wage * self.self_esteem_coefficient
     
     def stage_wage_recearch(self, wages: list=[]):
         self.others_wage = wages
@@ -66,7 +69,7 @@ class Worker():
         return False
 
     def __gt__(self, worker_2):
-        if self.current_wage < worker_2.current_wage:
+        if self.current_wage > worker_2.current_wage:
             return True
         return False
 

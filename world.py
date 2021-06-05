@@ -1,4 +1,5 @@
 import random
+import math
 
 import networkx as nx
 
@@ -35,11 +36,18 @@ class World():
             self.employers.append(Employer(i))
 
         #creating workers
-        for i in range(N_workers):
-            self.social_network.add_nodes_from([(i, {'worker': self._init_worker()})])
+        n_low = math.ceil(self.N_workers * (1-self.beta))
+        n_norm = math.floor(self.N_workers * self.beta)
+
+        low = [(i, {'worker': self._init_worker(tpe='imposter')}) for i in range(n_low)]
+        norm = [(n_low + i, {'worker': self._init_worker(tpe='normal')}) for i in range(n_norm)]
+
+        self.social_network.add_nodes_from(low)
+        self.social_network.add_nodes_from(norm)
         
         #creating connections between them, for now - fixed and getting as a param when init
         all_workers = list(range(self.N_workers))
+        random.shuffle(all_workers)
         for i in all_workers:
             connections = random.choices(all_workers, k=self.n_connections_per_worker)
             if i in connections:
@@ -47,10 +55,7 @@ class World():
             self.social_network.add_edges_from([ (i, c) for c in connections ])
         
 
-    def _init_worker(self):
-        tpe = 'normal'
-        if random.random() > self.beta:
-            tpe = 'imposter'
+    def _init_worker(self, tpe):
         return Worker(utype=tpe, current_wage=100)
 
     def __repr__(self):
@@ -79,7 +84,9 @@ class World():
             emp.offer_candidates(self.social_network)
 
     def third_stage(self):
-        for node in list(self.social_network.nodes):
+        workers_id = list(self.social_network.nodes)
+        random.shuffle(workers_id)
+        for node in workers_id:
             self.social_network.nodes[node]['worker'].stage_choose_employer() 
 
 
@@ -125,17 +132,20 @@ if __name__ == "__main__":
 
     print(test_network.mean_wage_history)
     for node in test_network.social_network.nodes:
-        print(f'worker {node}')        
+           
         w =  test_network.social_network.nodes[node]['worker']
-        print(w.wage_history)
-        print(w.employnment_history)
-        print()
-        print()
+        # print(f'worker {w}')     
+        # print(w.wage_history)
+        print(w.type, w.employnment_history, w.wage_history[-1])
+        # print()
+        # print()
 
     print('__'*30)
+    n_w = []
     for emp in test_network.employers:
+        n_w.append(emp.n_working_history)
         print(f'employer {emp.uid}')
         print(emp.n_working_history)
     
         print()
-        print()
+    print([sum([n[i] for n in n_w]) for i in range(10)])

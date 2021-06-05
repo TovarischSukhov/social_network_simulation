@@ -20,6 +20,7 @@ class Employer():
         '''Method used by World to drop state between iterations'''
         self.n_working_history.append(self.n_currently_working)
         self.n_currently_working = 0
+        self.candidates = []
 
     def create_candidates_list(self, network):
         for _ in range(self.n_vacances):
@@ -30,7 +31,8 @@ class Employer():
 
     def choose_workers(self, network):
         for vac in self.candidates:
-            network.nodes[min(vac)]['worker'].recieve_offer(self)
+            workers = [ network.nodes[v]['worker'] for v in vac ]
+            min(workers).recieve_offer(self)
 
     def offer_candidates(self, network):
         '''Method used by World to cover stage 2'''
