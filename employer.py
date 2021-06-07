@@ -62,7 +62,7 @@ class Employer():
         elif case == 'upsale':
             # print('upsale', worker, 'upsalig from', salary)
             # TODO temrary thing, here will be utility function for employer
-            salary += salary*(random.randint(0, 20)/100)
+            salary += salary*(random.randint(0, 10)/100)
             if salary > 2*worker.give_employer_wage():
                 # print('break')
                 return
