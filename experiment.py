@@ -5,14 +5,17 @@ from world import World
 
 
 class Experiment():
-    def __init__(self, alpha_range, beta_range, n_iterations=100):
+    def __init__(self, alpha_range, beta_range, n_iterations=100, N_workers=100, N_companies=20, n_conn=5, n_vac=2):
         self.alpha_range = alpha_range
         self.beta_range = beta_range
         self.n_iterations = n_iterations
         self.results = {}
+        self.config = dict(
+            N_workers=N_workers, N_companies=N_companies, n_conn=n_conn, n_vac=n_vac
+        )
 
     def run_variation(self, n_iterations, silent=True, **kwargs):
-        test_network = World(**kwargs)
+        test_network = World(**kwargs, **self.config)
         if not silent:
             print(test_network)
 
@@ -33,7 +36,8 @@ class Experiment():
     def run(self, silent=True):
         for alpha in self.alpha_range:
             for beta in self.beta_range:
-                self.results[f'al_{alpha}_bet_{beta}'] = self.run_variation(self.n_iterations, silent=silent, alpha=alpha, beta=beta)
+                self.results[f'al_{alpha}_bet_{beta}'] = self.run_variation(
+                    self.n_iterations, silent=silent, alpha=alpha, beta=beta)
 
         if not silent:
             print(self.results)

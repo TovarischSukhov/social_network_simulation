@@ -20,7 +20,7 @@ Number of "friends" per worker {}
 
 class World():
     
-    def __init__(self, beta=1, alpha=1, N_workers=10, N_companies=3, n_conn=2):
+    def __init__(self, beta=1, alpha=1, N_workers=10, N_companies=3, n_conn=2, n_vac=3):
         self.beta = beta
         self.alpha = alpha
         self.N_workers = N_workers
@@ -33,7 +33,7 @@ class World():
         #creating Empoyers
         self.employers = []
         for i in range(N_companies):
-            self.employers.append(Employer(i))
+            self.employers.append(Employer(i, n_vac))
 
         #creating workers
         n_low = math.ceil(self.N_workers * (1-self.beta))
