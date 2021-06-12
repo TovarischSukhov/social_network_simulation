@@ -6,7 +6,7 @@ from settings import QUALIFICATIONS
 from utils import employer_challenge, make_qualifications_dict_from_market
 
 class Employer():
-    def __init__(self, uid, requirements: dict = {}, market_size: int = None, market_size_per_vacancy: int = 2):
+    def __init__(self, uid, requirements: dict = {}, market_size: int = None, market_size_per_vacancy: int = 3):
         '''
 
         imputs:
@@ -29,6 +29,8 @@ class Employer():
         # in-cycle data
         self.workers = []
         self.budget = 0
+        self.may_finish = False
+        self.market_data = {}
 
         # historical data
         self.qulification_level_history = []
@@ -52,6 +54,7 @@ class Employer():
         w = [w.give_employer_qualification_wage() for w in self.workers ]
         self.worker_qulification_history.append(make_qualifications_dict_from_market(w))
         self.workers = []
+        self.may_finish = False
 
 
     def _enreach_market_info(self, market, network):
@@ -67,29 +70,39 @@ class Employer():
         workers = [i for i in network.nodes() if not network.nodes[i]['worker'].is_employed]
         # workers = list(network.nodes()).copy()
         random.shuffle(workers)
-        print(workers, self.market_size, self.employees_needed())
+        # print(workers, self.market_size, self.employees_needed())
         samplesize = min(self.market_size, len(workers))
         market = random.sample(workers, k=samplesize)
         # print(' mmark', market)
         market = self._enreach_market_info(market, network)
         # print('m1', market)
         market, workers = make_qualifications_dict_from_market(market, return_workers=True)
-        # print('m2', market)
+        print('m2', market)
 
         prc, jun, mid, sen = employer_challenge(
             self.total_qualifiation_needed, self.budget, market, return_salaries=True,
             )
         mask = list(prc) + list(jun) + list(mid) + list(sen)
+        self.mask = mask
+        self.workers_to_call = workers
+        if sum(mask) == 0:
+            self.may_finish = True
+        
+
         for i in range(len(mask)):
             if mask[i] > 0:
                 workers[i].recieve_offer(self, mask[i])
-                print('w', workers[i])
+
+                # print('w', workers[i])
                 # print('wo', workers[i].offrs)
-        print(self.uid, 'done offering')
+        # print(self.uid, 'done offering')
 
 
     def employees_needed(self):
         '''Method used by World to determine if more workers needed'''
+        if self.may_finish:
+            return False
+        
         return self.total_qualifiation_needed > 0
 
 
@@ -98,11 +111,19 @@ class Employer():
         self.workers.append(worker)
         self.total_qualifiation_needed -=  QUALIFICATIONS[worker.real_qualification]
         self.current_market_size -= self.market_size_per_vacancy
-        self.budget -= worker.give_employer_qualification_wage()[2]
+        self.budget -= self.market_data[worker.real_qualification]
+
+        if worker not in self.workers_to_call:
+            print('oh god')
+
+        if self.budget < 0 or self.total_qualifiation_needed < 0:
+            print(f"Warning!!! buget {self.budget} total_qal {self.total_qualifiation_needed }")
         print(self.uid,'got answer from ', worker)
 
     def set_budget(self, market_data):
         '''Method used by World to give new wages stats in the beginning of each round'''
+        self.budget = 0
+        self.market_data = market_data
         for q in self.requirements:
-            self.budget += self.requirements[q] * market_data[q]
+            self.budget += self.requirements[q] * market_data[q] * 10
         

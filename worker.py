@@ -82,7 +82,7 @@ class Worker():
             # if we already mede all the steps, we need to return the salary
             if change >= len(steps):
                 # if on the last step we would bave been hired, we return last salary
-                print(salary, prev_salary, employer_answer)
+                # print(salary, prev_salary, employer_answer)
                 if employer_answer == 1:
                     self.next_iter_wage = salary
                     return
@@ -99,8 +99,16 @@ class Worker():
         # print(steps, 'idx', change, 'cf', coeff,'idx', employer_answer)
         # print('prev salary', prev_salay, 'salary', salary, 'went for', steps[change], coeff[employer_answer] )
         # print('currnt answer',employer_answer, 'prev answer',  last_employer_answer, 'change no', change)
+
+        try:
         
-        salary  = (coeff[employer_answer] * steps[change] + 1) * salary
+            salary  = (coeff[employer_answer] * steps[change] + 1) * salary
+        except:
+            print('emp', employment)
+            print('qal', self.self_esteemed_qualification)
+            print('answ', employer_answer)
+            print('change', change)
+            print('prev_salay', prev_salay)
         # print('prev salary', prev_salay, 'salary', salary, 'went for', steps[change], coeff[employer_answer] )
         # print('currnt answer',employer_answer, 'prev answer',  last_employer_answer, 'change no', change)
 
@@ -111,8 +119,8 @@ class Worker():
 
     
     def _count_new_wage(self):
+        self.others_qualifications_wages =  [w for w in self.others_qualifications_wages if w]
         if self.others_qualifications_wages:
-            
             self.others_qualifications_wages = make_qualifications_dict_from_market(self.others_qualifications_wages)
             steps = [0.1, 0.05, 0.01]
             self._fit_market(steps, self.current_wage)
@@ -130,14 +138,19 @@ class Worker():
         Method used by Worker to find out current wages level
         returns: qualification_level, wage or None
         '''
+        # print('hist', self.employnment_history)
+        # print(self.current_wage)
+        if self.employnment_history and not self.employnment_history[-1]:
+            # print('not telling')
+            return
         if random.random() <= self.tell_wage_coeff:
-            return self, self.self_esteemed_qualification, self.current_wage 
+            return self, self.real_qualification, self.current_wage 
     
     def stage_wage_recearch(self, qualifications_wages: list, market_data:dict):
         ''' Mehtod used by World to give Worker wages of surrounding Workers
         '''
         self.others_qualifications_wages = qualifications_wages
-        self.employer_budget = [self.employer_requrnments[q] * market_data[q] for q in self.employer_requrnments]
+        self.employer_budget = sum([self.employer_requrnments[q] * market_data[q] for q in self.employer_requrnments])
         self._count_new_wage()
         
 
@@ -160,10 +173,10 @@ class Worker():
         #         mx_offers = []
         #     if of.salary == mx_sal:
         #         mx_offers.append(of)
-        print(self.offers)
-        if len(self.offers) > 0:
+        print('got', len(self.offers), 'offers')
+        if self.offers:
             random.choice(self.offers).employer.get_answer_from_worker(self)
-            print('agreed random')
+            # print('agreed random')
             self.is_employed = True
             self.offers = []
         # print(len(self.offers),'offers on the way out')
@@ -184,7 +197,7 @@ class Worker():
         return False
 
     def __repr__(self):
-        return f"Worker {self.id}. type {self.type}, salary {self.current_wage}"
+        return f"Worker {self.id}. type {self.type}, qual {self.real_qualification}, salary {self.next_iter_wage}"
 
 
 class Offer:

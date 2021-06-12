@@ -27,30 +27,34 @@ class World():
                 qualification_ratio, 
                 beta=1, 
                 alpha=1, 
-                N_workers=10, 
-                N_companies=3, 
-                n_conn=2,
+                no_workers=10, 
+                no_employers=3, 
+                no_connections=2,
+                no_vacancys_per_employer=3,
+                **kwargs
+
             ):
         self.beta = beta
         self.alpha = alpha
         self.N_workers = 0
         self.iteration = 0
         self.mean_wage_history = {}
-        self.n_connections_per_worker = n_conn
+        self.n_connections_per_worker = no_connections
 
         self.social_network = nx.Graph()
 
         #creating Employers
         self.employers = []
-        for i in range(N_companies):
+        for i in range(no_employers):
             self.employers.append(Employer(i, requirements=EMPLOYER_NEEDS, market_size_per_vacancy=3) )
 
         #creating workers
         for qual, ratio in qualification_ratio.items():
-            n_qual_workers = round(N_workers*ratio)
+            n_qual_workers = round(no_workers*ratio)
 
             n_low = math.ceil(n_qual_workers * (1-self.beta))
             n_norm = math.floor(n_qual_workers * self.beta)
+            #prtint(n_low, n_norm)
 
             low = [(self.N_workers + i, {'worker': self._init_worker('imposter', qual)}) for i in range(n_low)]
             norm = [(self.N_workers + n_low + i, {'worker': self._init_worker('normal', qual)}) for i in range(n_norm)]
@@ -81,7 +85,7 @@ class World():
 
 
     def _all_workers_employed(self):
-        print([not self.social_network.nodes[w]['worker'].is_employed for w in self.social_network.nodes])
+        # print([not self.social_network.nodes[w]['worker'].is_employed for w in self.social_network.nodes])
         return all(
                 [self.social_network.nodes[w]['worker'].is_employed for w in self.social_network.nodes]
                 )
@@ -114,7 +118,9 @@ class World():
         for node in self.social_network.nodes:
             wages = []
             for neighbor in self.social_network.neighbors(node):
+                # print(neighbor, self.social_network.nodes[neighbor])
                 wages.append(self.social_network.nodes[neighbor]['worker'].give_qualification_wage())
+            # print(self.social_network.nodes[node])
             self.social_network.nodes[node]['worker'].stage_wage_recearch(wages, self.market_data)
 
 
@@ -128,7 +134,7 @@ class World():
 
     def can_finish_cycle(self):
         if self._all_workers_employed():
-            print('here')
+            # print('here')
             return True
         for emp in self.employers:
             if emp.employees_needed():
@@ -174,7 +180,10 @@ class World():
         if not silent:
             print(self)
 
+        print(self.iteration, 'ready to statrt')
+
         return self.get_mean_wage()
+
     
 if __name__ == "__main__":
     test_network = World(alpha=0.5, beta=0.5,n_conn=2, N_workers=10, N_companies=3, qualification_ratio={'junior': 0.5, 'middle': .3, 'senior': 0.2})

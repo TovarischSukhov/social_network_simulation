@@ -1,4 +1,5 @@
-EMPLOYER_NEEDS = { 'junior': 5, 'middle': 3, 'senior': 1 }
+
+EMPLOYER_NEEDS = { 'junior': 3, 'middle': 2, 'senior': 1 }
 QUALIFICATIONS = {'practice':100, 'junior':150, 'middle':250, 'senior':350}
 
 SELFESTEEM_QUALIFICATION_MOVE = {

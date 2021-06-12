@@ -46,10 +46,10 @@ def minimize_costs(total_qualifiation, salaries, change_indexis, qualifications)
     num_sen = len(salaries) - end_mid
 
     additional_constraints = [
-        sum(x[end_prc:end_jun]) >= min([1, num_jun]),
+        sum(x[end_prc:end_jun]) >= min([2, num_jun]) -1,
         # we require to have not less than one senior and middle per team
-        sum(x[end_jun:end_mid]) >= min([1, num_mid]),
-        sum(x[end_mid:]) >= min([1, num_sen]),
+        sum(x[end_jun:end_mid]) >= min([2, num_mid])-1,
+        sum(x[end_mid:]) >= min([2, num_sen])-1,
     ]
     lengths = [num_jun, num_mid, num_sen]
     additional_constraints = [c for i, c in enumerate(additional_constraints) if lengths[i] != 0]
@@ -63,8 +63,8 @@ def minimize_costs(total_qualifiation, salaries, change_indexis, qualifications)
 
     # lets define the problem and solve it
     prob = cp.Problem(objective, constraints)
-    prob.solve()
-    return x.value
+    prob.solve(solver='GUROBI')
+    return [round(a) for a in x.value]
 
 
 def maximize_qualification(budget, qualifications, salaries):
@@ -83,16 +83,13 @@ def maximize_qualification(budget, qualifications, salaries):
         x.T@salaries <= budget
     ]
 
-    # print()
-    # print(constraints, x)
-
     # lets define the problem and solve it
     prob = cp.Problem(objective, constraints)
 
     # print('maximize', budget, qualifications, salaries)
     prob.solve(solver='GUROBI')
 
-    return x.value
+    return [round(a) for a in x.value]
 
 
 def employer_challenge(total_qualifiation, budget, ratios, return_salaries=False):
@@ -118,10 +115,14 @@ def employer_challenge(total_qualifiation, budget, ratios, return_salaries=False
     # concatinate all salaries in one array, junes, middles, seniors and cave breaking points for every qualification-change
     salaries = ratios['practice'] + ratios['junior'] + ratios['middle'] + ratios['senior']
     qualifications = list(flatten([[QUALIFICATIONS[q]]*len(ratios[q]) for q in ratios]))
+
     
     end_prc = len(ratios['practice'])
     end_jun = end_prc + len(ratios['junior'])
     end_mid = end_jun + len(ratios['middle'])
+
+    if total_qualifiation <= 0 or budget <= 0:
+        return ([0]*end_prc, [0]*(end_jun - end_prc), [0]*(end_mid - end_jun), [0]*(len(salaries) - end_mid))
 
     total_qualifiation_on_market = sum(qualifications)
     
@@ -138,7 +139,7 @@ def employer_challenge(total_qualifiation, budget, ratios, return_salaries=False
                 total_qualifiation, 
                 salaries, 
                 (end_prc, end_jun, end_mid),
-                salaries
+                qualifications
             )
 
 
