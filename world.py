@@ -49,7 +49,7 @@ class World():
         all_workers = list(range(self.N_workers))
         random.shuffle(all_workers)
         for i in all_workers:
-            current = len(self.social_network.neighbors(i))
+            current = len(list(self.social_network.neighbors(i)))
             connections = random.choices(all_workers, k=self.n_connections_per_worker-current)
             if i in connections:
                 connections.remove(i)
