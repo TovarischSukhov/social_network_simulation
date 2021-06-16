@@ -49,7 +49,8 @@ class World():
         all_workers = list(range(self.N_workers))
         random.shuffle(all_workers)
         for i in all_workers:
-            connections = random.choices(all_workers, k=self.n_connections_per_worker)
+            current = len(self.social_network.neighbors(i))
+            connections = random.choices(all_workers, k=self.n_connections_per_worker-current)
             if i in connections:
                 connections.remove(i)
             self.social_network.add_edges_from([ (i, c) for c in connections ])
