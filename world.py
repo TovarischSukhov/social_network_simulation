@@ -44,8 +44,12 @@ class World():
         n_low = math.ceil(self.N_workers * (1-self.beta))
         n_norm = math.floor(self.N_workers * self.beta)
 
-        low = [(i, {'worker': self._init_worker(self_esteem_coefficients, tpe='imposter')}) for i in range(n_low)]
-        norm = [(n_low + i, {'worker': self._init_worker(self_esteem_coefficients, tpe='normal')}) for i in range(n_norm)]
+        low = [(i, {'worker': self._init_worker(
+            self_esteem_coefficients, tpe='imposter', tell_wage=self.alpha
+            )}) for i in range(n_low)]
+        norm = [(n_low + i, {'worker': self._init_worker(
+            self_esteem_coefficients, tpe='normal', tell_wage=self.alpha
+            )}) for i in range(n_norm)]
 
         self.social_network.add_nodes_from(low)
         self.social_network.add_nodes_from(norm)
@@ -53,15 +57,15 @@ class World():
         #creating connections between them, for now - fixed and getting as a param when init
         all_workers = list(range(self.N_workers))
         for i in all_workers:
-            current = len(self.social_network.neighbors(i))
+            current = len(list(self.social_network.neighbors(i)))
             connections = random.choices(all_workers, k=self.n_connections_per_worker-current)
             if i in connections:
                 connections.remove(i)
             self.social_network.add_edges_from([ (i, c) for c in connections ])
         
 
-    def _init_worker(self, self_esteem_coefficients, tpe):
-        return Worker(utype=tpe, current_wage=100, self_esteem_coefficients=self_esteem_coefficients)
+    def _init_worker(self, self_esteem_coefficients, tpe, tell_wage=1.0):
+        return Worker(utype=tpe, current_wage=100, self_esteem_coefficients=self_esteem_coefficients, tell_wage=tell_wage)
 
 
     def _all_workers_employed(self):

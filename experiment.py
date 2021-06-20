@@ -2,6 +2,7 @@ import matplotlib as plt
 
 from world import World
 
+import time
 
 
 class Experiment():
@@ -23,8 +24,6 @@ class Experiment():
 
         wages = []
         for stage_num in range(n_iterations):
-            # if not silent:
-            # print(f'starting stage {stage_num}')
             wages.append(self.current_world.run_iteration(silent=silent))
 
         return wages
@@ -38,9 +37,11 @@ class Experiment():
     def run(self, silent=True):
         for alpha in self.alpha_range:
             for beta in self.beta_range:
+                
                 self.results[f'al_{alpha}_bet_{beta}'] = self.run_variation(
                     self.n_iterations, silent=silent, alpha=alpha, beta=beta, **self.additional_info
                     )
+                
                 print(f'finisched {alpha}, {beta}')
         if not silent:
             print(self.results)
@@ -49,7 +50,7 @@ decimal_range_hundreds = lambda s, f, step: [x/100 for x in range(int(s*100), in
 
 
 if __name__ == '__main__':
-    exp = Experiment(decimal_range_hundreds(0.5, 1.0, 0.05), decimal_range_hundreds(0.5, 1.0, 0.05))
+    exp = Experiment([1.0], [0.5], n_iterations=5)
     exp.set_config({
         'no_workers': 1000,
         'no_employers': 100,

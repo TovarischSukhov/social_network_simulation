@@ -6,7 +6,7 @@ class Worker():
             self, 
             current_wage: int, 
             utype:str = "normal", 
-            tell_wage: float = 1, 
+            tell_wage: float = 1.0, 
             _id: int = None, 
             self_esteem_coefficients: dict = {}
         ):
@@ -31,6 +31,8 @@ class Worker():
         self.wage_history = []
         self.employnment_history = []
 
+        # print('inited')
+
 
     def new_cycle(self):
         '''Method used by World to drop state between iterations'''
@@ -50,7 +52,7 @@ class Worker():
         return self.current_wage
 
     def give_wage(self):
-        if random.random() <= self.tell_wage_coeff:
+        if random.random() >= self.tell_wage_coeff:
             return self.previous_wage 
     
     def stage_wage_recearch(self, wages: list=[]):
